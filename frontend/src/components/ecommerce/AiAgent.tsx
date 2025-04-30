@@ -29,6 +29,20 @@ interface SpeechRecognition extends EventTarget {
   onend: (() => void) | null;
 }
 
+interface StockItem {
+  name: string;
+  category: string;
+  quantity: number;
+  status: string;
+}
+
+interface StockAnalysis {
+  totalItems: number;
+  inStockItems: number;
+  outOfStockItems: number;
+  stockData: StockItem[];
+}
+
 declare global {
   interface Window {
     SpeechRecognition: new () => SpeechRecognition;
@@ -136,14 +150,75 @@ export default function AIVoiceAgent() {
     const newHistory: ConversationEntry[] = [...conversationHistory, { role: "user", text: userInput }];
     setConversationHistory(newHistory);
 
-    if (userInput.toLowerCase().includes("hello") || userInput.toLowerCase().includes("hi")) {
-      const response = shortAnswers ? "Hi!" : "Hello! I'm here to help with your stock and meal planning.";
-      setAgentResponse(response);
-      speakText(response);
-      setConversationHistory([...newHistory, { role: "agent", text: response }]);
+    // Check if the query is about memory or stock
+    const memoryKeywords = ["memory", "remember", "what do you know", "what can you tell me"];
+    const stockKeywords = ["stock", "inventory", "items", "available", "quantity", "what do i have"];
+    
+    const isMemoryQuery = memoryKeywords.some(keyword => userInput.toLowerCase().includes(keyword));
+    const isStockQuery = stockKeywords.some(keyword => userInput.toLowerCase().includes(keyword));
+
+    if (isMemoryQuery || isStockQuery) {
+      try {
+        const response = await fetch('http://localhost:5000/api/stockitems/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: userInput }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to get stock analysis');
+
+        const stockAnalysis = data as StockAnalysis;
+        
+        // Format the response based on the analysis
+        let formattedResponse = "";
+        if (stockAnalysis.stockData.length === 0) {
+          formattedResponse = "I don't have any items in my memory at the moment.";
+        } else {
+          formattedResponse = `Here's what I remember about your stock:\n\n`;
+          formattedResponse += `Total Items: ${stockAnalysis.totalItems}\n`;
+          formattedResponse += `Items In Stock: ${stockAnalysis.inStockItems}\n`;
+          formattedResponse += `Items Out of Stock: ${stockAnalysis.outOfStockItems}\n\n`;
+          
+          // Group items by category
+          const itemsByCategory = stockAnalysis.stockData.reduce((acc: Record<string, StockItem[]>, item: StockItem) => {
+            if (!acc[item.category]) acc[item.category] = [];
+            acc[item.category].push(item);
+            return acc;
+          }, {});
+
+          // Add category-wise details
+          Object.entries(itemsByCategory).forEach(([category, items]) => {
+            formattedResponse += `${category}:\n`;
+            (items as StockItem[]).forEach((item: StockItem) => {
+              formattedResponse += `- ${item.name}: ${item.quantity} units (${item.status})\n`;
+            });
+            formattedResponse += '\n';
+          });
+
+          // Add meal suggestions based on available items
+          const availableItems = stockAnalysis.stockData.filter(item => item.status === "InStock");
+          if (availableItems.length > 0) {
+            formattedResponse += `\nBased on your available items, I can suggest:\n`;
+            formattedResponse += `- Breakfast: ${availableItems.filter(item => item.category.toLowerCase().includes('breakfast')).length} items available\n`;
+            formattedResponse += `- Lunch: ${availableItems.filter(item => item.category.toLowerCase().includes('lunch')).length} items available\n`;
+            formattedResponse += `- Dinner: ${availableItems.filter(item => item.category.toLowerCase().includes('dinner')).length} items available\n`;
+          }
+        }
+
+        setConversationHistory([...newHistory, { role: "agent", text: formattedResponse }]);
+        setAgentResponse(formattedResponse);
+        speakText(formattedResponse);
+      } catch (error) {
+        console.error('Error fetching stock analysis:', error);
+        const errorMsg = "I couldn't access my memory right now. Please try again!";
+        setAgentResponse(errorMsg);
+        speakText(errorMsg);
+      }
       return;
     }
 
+    // Handle meal-related queries (existing code)
     const mealKeywords = ["meal", "cook", "breakfast", "lunch", "dinner", "food"];
     if (mealKeywords.some(keyword => userInput.toLowerCase().includes(keyword))) {
       try {
@@ -163,13 +238,14 @@ export default function AIVoiceAgent() {
         speakText(generatedText);
       } catch (error) {
         console.error('Error fetching meal suggestions:', error);
-        const errorMsg = "I couldn’t fetch meal ideas right now. Try again!";
+        const errorMsg = "I couldn't fetch meal ideas right now. Try again!";
         setAgentResponse(errorMsg);
         speakText(errorMsg);
       }
       return;
     }
 
+    // Handle other queries
     try {
       const response = await fetch('http://localhost:5000/api/voice-agent', {
         method: 'POST',
@@ -187,7 +263,7 @@ export default function AIVoiceAgent() {
       speakText(generatedText);
     } catch (error) {
       console.error('Error fetching response:', error);
-      const errorMsg = "Something went wrong while checking the stock!";
+      const errorMsg = "Something went wrong while processing your request!";
       setAgentResponse(errorMsg);
       speakText(errorMsg);
     }

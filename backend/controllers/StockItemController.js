@@ -117,6 +117,35 @@ class StockItemController {
       res.status(500).json({ message: 'Error deleting stock item', error: error.message });
     }
   }
+
+  static async analyzeStockForAI(req, res) {
+    try {
+      const { question } = req.body;
+      const stockItems = await StockItem.find();
+      
+      // Transform stock items for AI analysis
+      const stockData = stockItems.map(item => ({
+        name: item.name,
+        category: item.category,
+        quantity: item.quantity,
+        status: item.status
+      }));
+
+      // Here you would typically integrate with an AI service
+      // For now, we'll return a basic analysis
+      const analysis = {
+        totalItems: stockItems.length,
+        inStockItems: stockItems.filter(item => item.status === "InStock").length,
+        outOfStockItems: stockItems.filter(item => item.status === "OutOfStock").length,
+        stockData: stockData
+      };
+
+      res.status(200).json(analysis);
+    } catch (error) {
+      console.error('Error in analyzeStockForAI:', error);
+      res.status(500).json({ message: 'Error analyzing stock data', error: error.message });
+    }
+  }
 }
 
 module.exports = StockItemController;
