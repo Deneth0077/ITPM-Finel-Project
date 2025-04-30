@@ -7,7 +7,7 @@ export default function SignIn() {
     <>
       <PageMeta
         title="React.js SignIn Dashboard | HomeStore - Next.js Admin Dashboard Template"
-        description="This is React.js SignIn Tables Dashboard page for HomeStore - React.js Tailwind CSS Admin Dashboard Template"
+        description="This is React.js SignIn Tables Dashboard page for HomeStore - React.js"
       />
       <AuthLayout>
         <SignInForm />
