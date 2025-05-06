@@ -1,4 +1,3 @@
-// server.js (or index.js)
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -6,8 +5,11 @@ const fileUpload = require('express-fileupload');
 const connectDB = require('./config/db');
 const stockItemRoutes = require('./routes/stockitems');
 const { MongoClient } = require('mongodb');
+const WebSocket = require('ws');
 
 const app = express();
+const server = require('http').createServer(app);
+const wss = new WebSocket.Server({ server });
 
 const MONGO_URI = process.env.MONGO_URI;
 let db;
@@ -17,9 +19,10 @@ let db;
     const client = new MongoClient(MONGO_URI);
     await client.connect();
     db = client.db('voice_agent_db');
-    console.log('Connected to MongoDB for Voice Agent');
+    console.log('Connected to MongoDB');
   } catch (error) {
     console.error('MongoDB connection error:', error);
+    process.exit(1); // Exit if MongoDB connection fails
   }
 })();
 
@@ -33,52 +36,101 @@ app.use('/api/stockitems', stockItemRoutes);
 
 app.post('/api/voice-agent', async (req, res) => {
   const { question, shortAnswers } = req.body;
+  if (!question) return res.status(400).json({ error: 'No question provided' });
 
   try {
-    if (!db) throw new Error('Database not connected');
+    const trimmedQuestion = question.trim().toLowerCase();
+    let responseText = '';
 
-    const stockItems = await db.collection('stockitems').find({}).toArray();
-
-    // Simple meal suggestion logic based on available stock
-    const mealSuggestions = {
-      breakfast: [],
-      lunch: [],
-      dinner: []
-    };
-
-    stockItems.forEach(item => {
-      const qty = item.quantity;
-      const wgt = item.weight;
-
-      // Breakfast suggestions
-      if (qty > 0 && ['fruits', 'bread', 'eggs', 'milk'].some(cat => item.category.toLowerCase().includes(cat))) {
-        mealSuggestions.breakfast.push(`${item.name} (${qty} available, ${wgt}g)`);
-      }
-      // Lunch suggestions
-      if (qty > 0 && ['vegetables', 'meat', 'rice', 'pasta'].some(cat => item.category.toLowerCase().includes(cat))) {
-        mealSuggestions.lunch.push(`${item.name} (${qty} available, ${wgt}g)`);
-      }
-      // Dinner suggestions
-      if (qty > 0 && ['meat', 'fish', 'vegetables', 'potatoes'].some(cat => item.category.toLowerCase().includes(cat))) {
-        mealSuggestions.dinner.push(`${item.name} (${qty} available, ${wgt}g)`);
-      }
-    });
-
-    let response = '';
-    if (shortAnswers) {
-      response = `Breakfast: ${mealSuggestions.breakfast[0] || 'None'}. Lunch: ${mealSuggestions.lunch[0] || 'None'}. Dinner: ${mealSuggestions.dinner[0] || 'None'}.`;
+    if (trimmedQuestion.includes('stock') || trimmedQuestion.includes('inventory') || trimmedQuestion.includes('available items')) {
+      const stockItems = await db.collection('stockitems').find({}, { projection: { name: 1, quantity: 1, unit: 1, _id: 0 } }).toArray();
+      responseText = stockItems.map(item => `${item.name}: ${item.quantity} ${item.unit}`).join(', ') || 'No stock items available.';
+    } else if (trimmedQuestion.includes('suggest meals') || trimmedQuestion.includes('meal ideas')) {
+      const stockItems = await db.collection('stockitems').find().toArray();
+      const ingredients = stockItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        nutrients: item.nutrients,
+      }));
+      const meals = await require('./controllers/StockItemController').generateMealSuggestions(ingredients);
+      responseText = `Meal Suggestions:\nBreakfast: ${meals.breakfast.map(m => m.name).join(', ') || 'None'}\nLunch: ${meals.lunch.map(m => m.name).join(', ') || 'None'}\nDinner: ${meals.dinner.map(m => m.name).join(', ') || 'None'}`;
     } else {
-      response = `Based on your stock:\n` +
-        `- Breakfast: ${mealSuggestions.breakfast.length > 0 ? mealSuggestions.breakfast.join(', ') : 'No suitable items'}\n` +
-        `- Lunch: ${mealSuggestions.lunch.length > 0 ? mealSuggestions.lunch.join(', ') : 'No suitable items'}\n` +
-        `- Dinner: ${mealSuggestions.dinner.length > 0 ? mealSuggestions.dinner.join(', ') : 'No suitable items'}`;
+      responseText = 'I can list stock or suggest meals. Try saying "list stock" or "suggest meals".';
     }
 
-    res.status(200).json({ response });
+    res.json({ response: responseText });
   } catch (error) {
-    console.error('Error querying database:', error);
-    res.status(500).json({ error: 'Failed to process request' });
+    console.error('Voice Agent API error:', error);
+    res.status(500).json({ error: 'Failed to get AI response.' });
   }
+});
+
+app.post('/api/chat', async (req, res) => {
+  const { message, shortAnswers } = req.body;
+  if (!message) return res.status(400).json({ error: 'No message provided' });
+
+  try {
+    const trimmedMessage = message.trim().toLowerCase();
+    let responseText = '';
+
+    if (trimmedMessage.includes('stock') || trimmedMessage.includes('inventory') || trimmedMessage.includes('available items')) {
+      const stockItems = await db.collection('stockitems').find({}, { projection: { name: 1, quantity: 1, unit: 1, _id: 0 } }).toArray();
+      responseText = stockItems.map(item => `${item.name}: ${item.quantity} ${item.unit}`).join(', ') || 'No stock items available.';
+    } else if (trimmedMessage.includes('suggest meals') || trimmedMessage.includes('meal ideas')) {
+      const stockItems = await db.collection('stockitems').find().toArray();
+      const ingredients = stockItems.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        nutrients: item.nutrients,
+      }));
+      const meals = await require('./controllers/StockItemController').generateMealSuggestions(ingredients);
+      responseText = `Meal Suggestions:\nBreakfast: ${meals.breakfast.map(m => m.name).join(', ') || 'None'}\nLunch: ${meals.lunch.map(m => m.name).join(', ') || 'None'}\nDinner: ${meals.dinner.map(m => m.name).join(', ') || 'None'}`;
+    } else {
+      responseText = 'I can list stock or suggest meals. Try saying "list stock" or "suggest meals".';
+    }
+
+    res.json({ response: responseText });
+  } catch (error) {
+    console.error('Chat API error:', error);
+    res.status(500).json({ error: 'Failed to get AI response.' });
+  }
+});
+
+app.post('/api/stockitems/checkNutrients', require('./controllers/StockItemController').checkNutrients);
+
+wss.on('connection', (ws) => {
+  ws.on('message', async (message) => {
+    const data = JSON.parse(message.toString());
+    if (data.type === 'chat') {
+      try {
+        let response = '';
+        if (data.message.toLowerCase().includes('stock') || data.message.toLowerCase().includes('inventory') || data.message.toLowerCase().includes('available items')) {
+          const stockItems = await db.collection('stockitems').find({}, { projection: { name: 1, quantity: 1, unit: 1, _id: 0 } }).toArray();
+          response = stockItems.map(item => `${item.name}: ${item.quantity} ${item.unit}`).join(', ') || 'No stock items available.';
+        } else if (data.message.toLowerCase().includes('suggest meals') || data.message.toLowerCase().includes('meal ideas')) {
+          const stockItems = await db.collection('stockitems').find().toArray();
+          const ingredients = stockItems.map(item => ({
+            name: imageUrl,
+            quantity: item.quantity,
+            unit: item.unit,
+            nutrients: item.nutrients,
+          }));
+          const meals = await require('./controllers/StockItemController').generateMealSuggestions(ingredients);
+          response = `Meal Suggestions:\nBreakfast: ${meals.breakfast.map(m => m.name).join(', ') || 'None'}\nLunch: ${meals.lunch.map(m => m.name).join(', ') || 'None'}\nDinner: ${meals.dinner.map(m => m.name).join(', ') || 'None'}`;
+        } else {
+          response = 'I can list stock or suggest meals. Try saying "list stock" or "suggest meals".';
+        }
+        ws.send(JSON.stringify({ type: 'response', message: response, role: 'agent' }));
+      } catch (error) {
+        console.error('WebSocket error:', error);
+        ws.send(JSON.stringify({ type: 'error', message: 'Failed to process your message.' }));
+      }
+    }
+  });
+
+  ws.send(JSON.stringify({ type: 'welcome', message: 'Connected to AI Chat Agent!' }));
 });
 
 app.get('/health', (req, res) => res.status(200).json({ status: 'OK', message: 'Server is running' }));
@@ -89,4 +141,5 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+module.exports.wss = wss;

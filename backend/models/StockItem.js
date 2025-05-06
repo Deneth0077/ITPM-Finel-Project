@@ -8,15 +8,15 @@ const stockItemSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    required: true
+    required: false
   },
   variants: {
     type: String,
-    required: true
+    required: false
   },
   price: {
     type: String,
-    required: true
+    required: false
   },
   category: {
     type: String,
@@ -32,10 +32,18 @@ const stockItemSchema = new mongoose.Schema({
     required: true,
     min: 0 // Ensure quantity is non-negative
   },
+  unit: {
+    type: String,
+    required: true
+  },
   weight: {
     type: Number, // Weight in grams, e.g., 500 for 500g
-    required: true,
+    required: false,
     min: 0
+  },
+  nutrients: {
+    type: Object,
+    required: false
   }
 }, {
   timestamps: true
