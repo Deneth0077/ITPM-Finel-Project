@@ -303,13 +303,13 @@ export default function HomeStock() {
           <Table>
             <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
               <TableRow>
-                <TableCell isHeader>Image</TableCell>
-                <TableCell isHeader>Name</TableCell>
-                <TableCell isHeader>Unit</TableCell>
-                <TableCell isHeader>Category</TableCell>
-                <TableCell isHeader>Status</TableCell>
-                <TableCell isHeader>Nutrients</TableCell>
-                <TableCell isHeader>Actions</TableCell>
+                <TableCell isHeader className="text-left">Image</TableCell>
+                <TableCell isHeader className="text-left">Name</TableCell>
+                <TableCell isHeader className="text-left">Unit</TableCell>
+                <TableCell isHeader className="text-left">Category</TableCell>
+                <TableCell isHeader className="text-left">Status</TableCell>
+                <TableCell isHeader className="text-left">Nutrients</TableCell>
+                <TableCell isHeader className="text-left">Actions</TableCell>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -322,7 +322,7 @@ export default function HomeStock() {
               ) : (
                 stockItems.map((stockItem) => (
                   <TableRow key={stockItem.id}>
-                    <TableCell>
+                    <TableCell className="text-left">
                       {stockItem.image ? (
                         <img 
                           src={stockItem.image} 
@@ -335,21 +335,21 @@ export default function HomeStock() {
                         </div>
                       )}
                     </TableCell>
-                    <TableCell>{stockItem.name}</TableCell>
-                    <TableCell>{stockItem.unit}</TableCell>
-                    <TableCell>{stockItem.category}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-left">{stockItem.name}</TableCell>
+                    <TableCell className="text-left">{stockItem.unit}</TableCell>
+                    <TableCell className="text-left">{stockItem.category}</TableCell>
+                    <TableCell className="text-left">
                       <Badge size="sm" color={stockItem.status === "InStock" ? "success" : stockItem.status === "Pending" ? "warning" : "error"}>
                         {stockItem.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-left">
                       {(() => {
                         const nutrients = stockItem.nutrients || { calories: 0, protein: 0, carbs: 0, fats: 0 };
                         return `Cal: ${nutrients.calories || 0}, P: ${nutrients.protein || 0}g, C: ${nutrients.carbs || 0}g, F: ${nutrients.fats || 0}g`;
                       })()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-left">
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEdit(stockItem)}
