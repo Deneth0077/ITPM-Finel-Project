@@ -8,11 +8,9 @@ import {
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
-  ListIcon,
   PageIcon,
   PieChartIcon,
   PlugInIcon,
-  TableIcon,
   UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
@@ -29,7 +27,7 @@ const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+    subItems: [{ name: "Home", path: "/", pro: false }],
   },
   {
     icon: <CalenderIcon />,
@@ -37,27 +35,11 @@ const navItems: NavItem[] = [
     path: "/calendar",
   },
   {
-    icon: <UserCircleIcon />,
-    name: "User Profile",
-    path: "/profile",
-  },
-  {
-    name: "Forms",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  },
-  {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
-  },
-  {
     name: "Pages",
     icon: <PageIcon />,
     subItems: [
       { name: "Blank Page", path: "/blank", pro: false },
       { name: "Store", path: "/homeStock", pro: false },
-      
       { name: "404 Error", path: "/error-404", pro: false },
     ],
   },
@@ -333,7 +315,7 @@ const AppSidebar: React.FC = () => {
           )}
         </Link>
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar flex-1">
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>
@@ -370,7 +352,19 @@ const AppSidebar: React.FC = () => {
             </div>
           </div>
         </nav>
-        
+      </div>
+      <div className="mb-8 mt-auto">
+        <Link
+          to="/profile"
+          className="menu-item group flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        >
+          <span className="menu-item-icon-size">
+            <UserCircleIcon />
+          </span>
+          {(isExpanded || isHovered || isMobileOpen) && (
+            <span className="menu-item-text">User Profile</span>
+          )}
+        </Link>
       </div>
     </aside>
   );

@@ -6,6 +6,7 @@ const connectDB = require('./config/db');
 const stockItemRoutes = require('./routes/stockitems');
 const { MongoClient } = require('mongodb');
 const WebSocket = require('ws');
+const StockItem = require('./models/StockItem');
 
 const app = express();
 const server = require('http').createServer(app);
@@ -43,13 +44,12 @@ app.post('/api/voice-agent', async (req, res) => {
     let responseText = '';
 
     if (trimmedQuestion.includes('stock') || trimmedQuestion.includes('inventory') || trimmedQuestion.includes('available items')) {
-      const stockItems = await db.collection('stockitems').find({}, { projection: { name: 1, quantity: 1, unit: 1, _id: 0 } }).toArray();
-      responseText = stockItems.map(item => `${item.name}: ${item.quantity} ${item.unit}`).join(', ') || 'No stock items available.';
+      const stockItems = await StockItem.find({}, { name: 1, unit: 1, _id: 0 });
+      responseText = stockItems.map(item => `${item.name} (${item.unit})`).join(', ') || 'No stock items available.';
     } else if (trimmedQuestion.includes('suggest meals') || trimmedQuestion.includes('meal ideas')) {
-      const stockItems = await db.collection('stockitems').find().toArray();
+      const stockItems = await StockItem.find();
       const ingredients = stockItems.map(item => ({
         name: item.name,
-        quantity: item.quantity,
         unit: item.unit,
         nutrients: item.nutrients,
       }));
@@ -75,13 +75,12 @@ app.post('/api/chat', async (req, res) => {
     let responseText = '';
 
     if (trimmedMessage.includes('stock') || trimmedMessage.includes('inventory') || trimmedMessage.includes('available items')) {
-      const stockItems = await db.collection('stockitems').find({}, { projection: { name: 1, quantity: 1, unit: 1, _id: 0 } }).toArray();
-      responseText = stockItems.map(item => `${item.name}: ${item.quantity} ${item.unit}`).join(', ') || 'No stock items available.';
+      const stockItems = await StockItem.find({}, { name: 1, unit: 1, _id: 0 });
+      responseText = stockItems.map(item => `${item.name} (${item.unit})`).join(', ') || 'No stock items available.';
     } else if (trimmedMessage.includes('suggest meals') || trimmedMessage.includes('meal ideas')) {
-      const stockItems = await db.collection('stockitems').find().toArray();
+      const stockItems = await StockItem.find();
       const ingredients = stockItems.map(item => ({
         name: item.name,
-        quantity: item.quantity,
         unit: item.unit,
         nutrients: item.nutrients,
       }));
@@ -107,13 +106,12 @@ wss.on('connection', (ws) => {
       try {
         let response = '';
         if (data.message.toLowerCase().includes('stock') || data.message.toLowerCase().includes('inventory') || data.message.toLowerCase().includes('available items')) {
-          const stockItems = await db.collection('stockitems').find({}, { projection: { name: 1, quantity: 1, unit: 1, _id: 0 } }).toArray();
-          response = stockItems.map(item => `${item.name}: ${item.quantity} ${item.unit}`).join(', ') || 'No stock items available.';
+          const stockItems = await StockItem.find({}, { name: 1, unit: 1, _id: 0 });
+          response = stockItems.map(item => `${item.name} (${item.unit})`).join(', ') || 'No stock items available.';
         } else if (data.message.toLowerCase().includes('suggest meals') || data.message.toLowerCase().includes('meal ideas')) {
-          const stockItems = await db.collection('stockitems').find().toArray();
+          const stockItems = await StockItem.find();
           const ingredients = stockItems.map(item => ({
-            name: imageUrl,
-            quantity: item.quantity,
+            name: item.name,
             unit: item.unit,
             nutrients: item.nutrients,
           }));
