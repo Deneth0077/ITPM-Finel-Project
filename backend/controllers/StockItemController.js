@@ -227,4 +227,11 @@ async function generateMealSuggestions(ingredients) {
   return meals;
 }
 
+// Service function to get all stock items (returns array, not Express response)
+async function getAllStockItemsService() {
+  const stockItems = await StockItem.find();
+  return stockItems.map(transformStockItem);
+}
+
 module.exports = StockItemController;
+module.exports.getAllStockItemsService = getAllStockItemsService;
