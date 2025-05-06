@@ -11,7 +11,6 @@ interface Product {
   price: string;
   status: "InStock" | "Pending" | "OutOfStock";
   image: string;
-  quantity: number;
   weight: number;
 }
 
@@ -36,7 +35,6 @@ export default function RecentOrders() {
           price: string;
           status: "InStock" | "Pending" | "OutOfStock";
           image: string;
-          quantity: number;
           weight: number;
         }
 
@@ -48,7 +46,6 @@ export default function RecentOrders() {
           price: item.price,
           status: item.status,
           image: item.image,
-          quantity: item.quantity,
           weight: item.weight
         }));
 
@@ -73,12 +70,11 @@ export default function RecentOrders() {
         <Table>
           <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
             <TableRow>
-              <TableCell isHeader>Products</TableCell>
-              <TableCell isHeader>Category</TableCell>
-              <TableCell isHeader>Price</TableCell>
-              <TableCell isHeader>Status</TableCell>
-              <TableCell isHeader>Quantity</TableCell>
-              <TableCell isHeader>Weight (g)</TableCell>
+              <TableCell isHeader className="text-left">Products</TableCell>
+              <TableCell isHeader className="text-left">Category</TableCell>
+              <TableCell isHeader className="text-left">Price</TableCell>
+              <TableCell isHeader className="text-left">Status</TableCell>
+              <TableCell isHeader className="text-left">Weight (g)</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -100,15 +96,14 @@ export default function RecentOrders() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>{product.category}</TableCell>
-                  <TableCell>{product.price}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-left">{product.category}</TableCell>
+                  <TableCell className="text-left">{product.price}</TableCell>
+                  <TableCell className="text-left">
                     <Badge size="sm" color={product.status === "InStock" ? "success" : product.status === "Pending" ? "warning" : "error"}>
                       {product.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{product.quantity}</TableCell>
-                  <TableCell>{product.weight}</TableCell>
+                  <TableCell className="text-left">{product.weight}</TableCell>
                 </TableRow>
               ))
             )}

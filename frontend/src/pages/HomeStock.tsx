@@ -8,7 +8,6 @@ import Alert from "../components/ui/alert/Alert";
 interface StockItem {
   id: string;
   name: string;
-  quantity: number;
   unit: string;
   category: string;
   status: "InStock" | "Pending" | "OutOfStock";
@@ -32,7 +31,6 @@ export default function HomeStock() {
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
   const [formData, setFormData] = useState({
     name: '',
-    quantity: '',
     unit: '',
     category: '',
     status: '' as '' | 'InStock' | 'Pending' | 'OutOfStock',
@@ -92,7 +90,6 @@ export default function HomeStock() {
 
     const data = new FormData();
     data.append('name', formData.name);
-    data.append('quantity', formData.quantity);
     data.append('unit', formData.unit);
     data.append('category', formData.category);
     data.append('status', formData.status);
@@ -131,7 +128,6 @@ export default function HomeStock() {
 
       setFormData({
         name: '',
-        quantity: '',
         unit: '',
         category: '',
         status: '',
@@ -152,7 +148,6 @@ export default function HomeStock() {
     setEditId(stockItem.id);
     setFormData({
       name: stockItem.name,
-      quantity: stockItem.quantity.toString(),
       unit: stockItem.unit,
       category: stockItem.category,
       status: stockItem.status,
@@ -225,17 +220,6 @@ export default function HomeStock() {
               onChange={handleInputChange}
               accept="image/*"
               className="border p-2 rounded"
-            />
-            <input
-              type="number"
-              name="quantity"
-              value={formData.quantity}
-              onChange={handleInputChange}
-              placeholder="Quantity"
-              className="border p-2 rounded"
-              required
-              min="0"
-              step="0.1"
             />
             <input
               type="text"
@@ -321,7 +305,6 @@ export default function HomeStock() {
               <TableRow>
                 <TableCell isHeader>Image</TableCell>
                 <TableCell isHeader>Name</TableCell>
-                <TableCell isHeader>Quantity</TableCell>
                 <TableCell isHeader>Unit</TableCell>
                 <TableCell isHeader>Category</TableCell>
                 <TableCell isHeader>Status</TableCell>
@@ -353,7 +336,6 @@ export default function HomeStock() {
                       )}
                     </TableCell>
                     <TableCell>{stockItem.name}</TableCell>
-                    <TableCell>{stockItem.quantity}</TableCell>
                     <TableCell>{stockItem.unit}</TableCell>
                     <TableCell>{stockItem.category}</TableCell>
                     <TableCell>

@@ -13,7 +13,6 @@ const geminiApiKey = process.env.GEMINI_API_KEY;
 const transformStockItem = (item) => ({
   id: item._id.toString(),
   name: item.name,
-  quantity: item.quantity,
   unit: item.unit,
   category: item.category,
   status: item.status,
@@ -49,9 +48,9 @@ class StockItemController {
 
   static async createStockItem(req, res) {
     try {
-      const { name, quantity, unit, category, status, variants, price, weight, nutrients } = req.body;
-      if (!name || !quantity || !unit || !category || !status) {
-        return res.status(400).json({ message: 'Required fields missing: name, quantity, unit, category, and status are required' });
+      const { name, unit, category, status, variants, price, weight, nutrients } = req.body;
+      if (!name || !unit || !category || !status) {
+        return res.status(400).json({ message: 'Required fields missing: name, unit, category, and status are required' });
       }
 
       let imageUrl = '';
@@ -65,7 +64,6 @@ class StockItemController {
 
       const stockItem = new StockItem({
         name,
-        quantity: parseFloat(quantity),
         unit,
         category,
         status,
@@ -98,7 +96,7 @@ class StockItemController {
       const stockItem = await StockItem.findById(req.params.id);
       if (!stockItem) return res.status(404).json({ message: 'Stock item not found' });
 
-      const { name, quantity, unit, category, status, variants, price, weight, nutrients } = req.body;
+      const { name, unit, category, status, variants, price, weight, nutrients } = req.body;
       let imageUrl = stockItem.image;
 
       if (req.files && req.files.image) {
@@ -111,7 +109,6 @@ class StockItemController {
 
       Object.assign(stockItem, {
         name: name || stockItem.name,
-        quantity: quantity ? parseFloat(quantity) : stockItem.quantity,
         unit: unit || stockItem.unit,
         category: category || stockItem.category,
         status: status || stockItem.status,
@@ -146,7 +143,6 @@ class StockItemController {
       const stockItems = await StockItem.find();
       const ingredients = stockItems.map(item => ({
         name: item.name,
-        quantity: item.quantity,
         unit: item.unit,
         nutrients: item.nutrients,
       }));

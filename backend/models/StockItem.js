@@ -27,11 +27,6 @@ const stockItemSchema = new mongoose.Schema({
     enum: ['InStock', 'Pending', 'OutOfStock'],
     required: true
   },
-  quantity: {
-    type: Number,
-    required: true,
-    min: 0 // Ensure quantity is non-negative
-  },
   unit: {
     type: String,
     required: true
