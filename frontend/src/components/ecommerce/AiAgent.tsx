@@ -166,15 +166,39 @@ export default function AIChatAgent() {
     setConversationHistory(newHistory);
 
     if (ws && ws.readyState === WebSocket.OPEN && !isVoice) {
-      ws.send(JSON.stringify({ type: 'chat', message: input, shortAnswers }));
+      const prompt = {
+        type: 'chat',
+        message: input,
+        shortAnswers: shortAnswers,
+        context: conversationHistory.map(entry => ({ role: entry.role, text: entry.text })),
+        instructions: `You are an AI assistant for a kitchen inventory system. Respond based on the following rules:
+          - If the user asks to 'check stock' or 'list stock', return a comma-separated list of available stock items with their quantities and units (e.g., "Apples: 5 kg, Bananas: 10 pcs").
+          - If the user says 'check nutrients' followed by an item name (e.g., 'check nutrients banana'), provide the nutrient details for that item (calories, protein, carbs, fats) from the nutrient map if available, or say 'No nutrient data available'.
+          - If the user says 'suggest meals', provide meal suggestions for breakfast, lunch, and dinner using available stock items, ensuring variety and balanced nutrition.
+          - For general queries or unrecognized commands, respond with: 'I can check stock, check nutrients for an item, or suggest meals. Try "check stock", "check nutrients [item]", or "suggest meals".'
+          - Use short responses if shortAnswers is true, otherwise provide detailed explanations.
+          - Maintain context from the conversation history where relevant.`
+      };
+      ws.send(JSON.stringify(prompt));
     } else {
       try {
         const endpoint = isVoice ? '/api/voice-agent' : '/api/chat';
-        const body = isVoice ? { question: input, shortAnswers } : { message: input, shortAnswers };
+        const prompt = {
+          question: input,
+          shortAnswers: shortAnswers,
+          context: conversationHistory.map(entry => ({ role: entry.role, text: entry.text })),
+          instructions: `You are an AI assistant for a kitchen inventory system. Respond based on the following rules:
+            - If the user asks to 'check stock' or 'list stock', return a comma-separated list of available stock items with their quantities and units (e.g., "Apples: 5 kg, Bananas: 10 pcs").
+            - If the user says 'check nutrients' followed by an item name (e.g., 'check nutrients banana'), provide the nutrient details for that item (calories, protein, carbs, fats) from the nutrient map if available, or say 'No nutrient data available'.
+            - If the user says 'suggest meals', provide meal suggestions for breakfast, lunch, and dinner using available stock items, ensuring variety and balanced nutrition.
+            - For general queries or unrecognized commands, respond with: 'I can check stock, check nutrients for an item, or suggest meals. Try "check stock", "check nutrients [item]", or "suggest meals".'
+            - Use short responses if shortAnswers is true, otherwise provide detailed explanations.
+            - Maintain context from the conversation history where relevant.`
+        };
         const response = await fetch(`http://localhost:5000${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify(prompt),
         });
 
         const data = await response.json();

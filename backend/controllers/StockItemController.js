@@ -231,3 +231,4 @@ async function getAllStockItemsService() {
 
 module.exports = StockItemController;
 module.exports.getAllStockItemsService = getAllStockItemsService;
+module.exports.generateMealSuggestions = generateMealSuggestions;
