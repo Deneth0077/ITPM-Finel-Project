@@ -36,7 +36,7 @@ app.use(fileUpload({ useTempFiles: true, tempFileDir: '/tmp/' }));
 app.use('/api/stockitems', stockItemRoutes);
 
 app.post('/api/voice-agent', async (req, res) => {
-  const { question, shortAnswers } = req.body;
+  const { question, shortAnswers, mealTime } = req.body;
   if (!question) return res.status(400).json({ error: 'No question provided' });
 
   try {
@@ -46,17 +46,24 @@ app.post('/api/voice-agent', async (req, res) => {
     if (trimmedQuestion.includes('stock') || trimmedQuestion.includes('inventory') || trimmedQuestion.includes('available items')) {
       const stockItems = await StockItem.find({}, { name: 1, unit: 1, _id: 0 });
       responseText = stockItems.map(item => `${item.name} (${item.unit})`).join(', ') || 'No stock items available.';
-    } else if (trimmedQuestion.includes('suggest meals') || trimmedQuestion.includes('meal ideas')) {
+    } else if (trimmedQuestion.includes('suggest meals') || trimmedQuestion.includes('meal ideas') || trimmedQuestion.includes('dish') || mealTime) {
       const stockItems = await StockItem.find();
       const ingredients = stockItems.map(item => ({
         name: item.name,
         unit: item.unit,
         nutrients: item.nutrients,
       }));
-      const meals = await require('./controllers/StockItemController').generateMealSuggestions(ingredients);
-      responseText = `Meal Suggestions:\nBreakfast: ${meals.breakfast.map(m => m.name).join(', ') || 'None'}\nLunch: ${meals.lunch.map(m => m.name).join(', ') || 'None'}\nDinner: ${meals.dinner.map(m => m.name).join(', ') || 'None'}`;
+      const meals = await require('./controllers/StockItemController').generateMealSuggestions(ingredients, mealTime);
+      if (mealTime) {
+        const mealSuggestions = meals[mealTime];
+        responseText = mealSuggestions.length > 0
+          ? `${mealTime.charAt(0).toUpperCase() + mealTime.slice(1)} suggestion: ${mealSuggestions.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')}, Nutrients: Cal: ${m.nutrients.calories}, P: ${m.nutrients.protein}g, C: ${m.nutrients.carbs}g, F: ${m.nutrients.fats}g)`).join('; ')}`
+          : `No ${mealTime} dishes can be made with available stock.`;
+      } else {
+        responseText = `Meal Suggestions:\nBreakfast: ${meals.breakfast.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')})`).join(', ') || 'None'}\nLunch: ${meals.lunch.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')})`).join(', ') || 'None'}\nDinner: ${meals.dinner.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')})`).join(', ') || 'None'}`;
+      }
     } else {
-      responseText = 'I can list stock or suggest meals. Try saying "list stock" or "suggest meals".';
+      responseText = 'I can list stock, check nutrients for an item, or suggest meals. Try saying "list stock", "check nutrients [item]", or "suggest meals".';
     }
 
     res.json({ response: responseText });
@@ -67,7 +74,7 @@ app.post('/api/voice-agent', async (req, res) => {
 });
 
 app.post('/api/chat', async (req, res) => {
-  const { message, shortAnswers } = req.body;
+  const { message, shortAnswers, mealTime } = req.body;
   if (!message) return res.status(400).json({ error: 'No message provided' });
 
   try {
@@ -77,17 +84,24 @@ app.post('/api/chat', async (req, res) => {
     if (trimmedMessage.includes('stock') || trimmedMessage.includes('inventory') || trimmedMessage.includes('available items')) {
       const stockItems = await StockItem.find({}, { name: 1, unit: 1, _id: 0 });
       responseText = stockItems.map(item => `${item.name} (${item.unit})`).join(', ') || 'No stock items available.';
-    } else if (trimmedMessage.includes('suggest meals') || trimmedMessage.includes('meal ideas')) {
+    } else if (trimmedMessage.includes('suggest meals') || trimmedMessage.includes('meal ideas') || trimmedMessage.includes('dish') || mealTime) {
       const stockItems = await StockItem.find();
       const ingredients = stockItems.map(item => ({
         name: item.name,
         unit: item.unit,
         nutrients: item.nutrients,
       }));
-      const meals = await require('./controllers/StockItemController').generateMealSuggestions(ingredients);
-      responseText = `Meal Suggestions:\nBreakfast: ${meals.breakfast.map(m => m.name).join(', ') || 'None'}\nLunch: ${meals.lunch.map(m => m.name).join(', ') || 'None'}\nDinner: ${meals.dinner.map(m => m.name).join(', ') || 'None'}`;
+      const meals = await require('./controllers/StockItemController').generateMealSuggestions(ingredients, mealTime);
+      if (mealTime) {
+        const mealSuggestions = meals[mealTime];
+        responseText = mealSuggestions.length > 0
+          ? `${mealTime.charAt(0).toUpperCase() + mealTime.slice(1)} suggestion: ${mealSuggestions.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')}, Nutrients: Cal: ${m.nutrients.calories}, P: ${m.nutrients.protein}g, C: ${m.nutrients.carbs}g, F: ${m.nutrients.fats}g)`).join('; ')}`
+          : `No ${mealTime} dishes can be made with available stock.`;
+      } else {
+        responseText = `Meal Suggestions:\nBreakfast: ${meals.breakfast.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')})`).join(', ') || 'None'}\nLunch: ${meals.lunch.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')})`).join(', ') || 'None'}\nDinner: ${meals.dinner.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')})`).join(', ') || 'None'}`;
+      }
     } else {
-      responseText = 'I can list stock or suggest meals. Try saying "list stock" or "suggest meals".';
+      responseText = 'I can list stock, check nutrients for an item, or suggest meals. Try saying "list stock", "check nutrients [item]", or "suggest meals".';
     }
 
     res.json({ response: responseText });
@@ -105,20 +119,30 @@ wss.on('connection', (ws) => {
     if (data.type === 'chat') {
       try {
         let response = '';
-        if (data.message.toLowerCase().includes('stock') || data.message.toLowerCase().includes('inventory') || data.message.toLowerCase().includes('available items')) {
+        const trimmedMessage = data.message.toLowerCase();
+        const mealTime = data.mealTime;
+
+        if (trimmedMessage.includes('stock') || trimmedMessage.includes('inventory') || trimmedMessage.includes('available items')) {
           const stockItems = await StockItem.find({}, { name: 1, unit: 1, _id: 0 });
           response = stockItems.map(item => `${item.name} (${item.unit})`).join(', ') || 'No stock items available.';
-        } else if (data.message.toLowerCase().includes('suggest meals') || data.message.toLowerCase().includes('meal ideas')) {
+        } else if (trimmedMessage.includes('suggest meals') || trimmedMessage.includes('meal ideas') || trimmedMessage.includes('dish') || mealTime) {
           const stockItems = await StockItem.find();
           const ingredients = stockItems.map(item => ({
             name: item.name,
             unit: item.unit,
             nutrients: item.nutrients,
           }));
-          const meals = await require('./controllers/StockItemController').generateMealSuggestions(ingredients);
-          response = `Meal Suggestions:\nBreakfast: ${meals.breakfast.map(m => m.name).join(', ') || 'None'}\nLunch: ${meals.lunch.map(m => m.name).join(', ') || 'None'}\nDinner: ${meals.dinner.map(m => m.name).join(', ') || 'None'}`;
+          const meals = await require('./controllers/StockItemController').generateMealSuggestions(ingredients, mealTime);
+          if (mealTime) {
+            const mealSuggestions = meals[mealTime];
+            response = mealSuggestions.length > 0
+              ? `${mealTime.charAt(0).toUpperCase() + mealTime.slice(1)} suggestion: ${mealSuggestions.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')}, Nutrients: Cal: ${m.nutrients.calories}, P: ${m.nutrients.protein}g, C: ${m.nutrients.carbs}g, F: ${m.nutrients.fats}g)`).join('; ')}`
+              : `No ${mealTime} dishes can be made with available stock.`;
+          } else {
+            response = `Meal Suggestions:\nBreakfast: ${meals.breakfast.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')})`).join(', ') || 'None'}\nLunch: ${meals.lunch.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')})`).join(', ') || 'None'}\nDinner: ${meals.dinner.map(m => `${m.name} (Ingredients: ${m.ingredients.join(', ')})`).join(', ') || 'None'}`;
+          }
         } else {
-          response = 'I can list stock or suggest meals. Try saying "list stock" or "suggest meals".';
+          response = 'I can list stock, check nutrients for an item, or suggest meals. Try saying "list stock", "check nutrients [item]", or "suggest meals".';
         }
         ws.send(JSON.stringify({ type: 'response', message: response, role: 'agent' }));
       } catch (error) {

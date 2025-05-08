@@ -67,48 +67,50 @@ export default function RecentOrders() {
         {/* Filter and See all buttons unchanged */}
       </div>
       <div className="max-w-full overflow-x-auto">
-        <Table>
-          <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
-            <TableRow>
-              <TableCell isHeader className="text-left">Products</TableCell>
-              <TableCell isHeader className="text-left">Category</TableCell>
-              <TableCell isHeader className="text-left">Price</TableCell>
-              <TableCell isHeader className="text-left">Status</TableCell>
-              <TableCell isHeader className="text-left">Weight (g)</TableCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {loading ? (
-              <TableRow><td colSpan={6} className="text-center py-3">Loading...</td></TableRow>
-            ) : error ? (
-              <TableRow><td colSpan={6} className="text-center py-3 text-red-500">{error}</td></TableRow>
-            ) : products.length === 0 ? (
-              <TableRow><td colSpan={6} className="text-center py-3">No recent orders found</td></TableRow>
-            ) : (
-              products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <img src={product.image} className="h-[50px] w-[50px] object-cover rounded-md" alt={product.name} />
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <span className="text-gray-500 text-theme-xs">{product.variants}</span>
+        <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+          <Table>
+            <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
+              <TableRow>
+                <TableCell isHeader className="text-left">Products</TableCell>
+                <TableCell isHeader className="text-left">Category</TableCell>
+                <TableCell isHeader className="text-left">Price</TableCell>
+                <TableCell isHeader className="text-left">Status</TableCell>
+                <TableCell isHeader className="text-left">Weight (g)</TableCell>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {loading ? (
+                <TableRow><td colSpan={6} className="text-center py-3">Loading...</td></TableRow>
+              ) : error ? (
+                <TableRow><td colSpan={6} className="text-center py-3 text-red-500">{error}</td></TableRow>
+              ) : products.length === 0 ? (
+                <TableRow><td colSpan={6} className="text-center py-3">No recent orders found</td></TableRow>
+              ) : (
+                products.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <img src={product.image} className="h-[50px] w-[50px] object-cover rounded-md" alt={product.name} />
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <span className="text-gray-500 text-theme-xs">{product.variants}</span>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-left">{product.category}</TableCell>
-                  <TableCell className="text-left">{product.price}</TableCell>
-                  <TableCell className="text-left">
-                    <Badge size="sm" color={product.status === "InStock" ? "success" : product.status === "Pending" ? "warning" : "error"}>
-                      {product.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-left">{product.weight}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                    <TableCell className="text-left">{product.category}</TableCell>
+                    <TableCell className="text-left">{product.price}</TableCell>
+                    <TableCell className="text-left">
+                      <Badge size="sm" color={product.status === "InStock" ? "success" : product.status === "Pending" ? "warning" : "error"}>
+                        {product.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-left">{product.weight}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

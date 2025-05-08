@@ -165,16 +165,28 @@ export default function AIChatAgent() {
     const newHistory = [...conversationHistory, { role: 'user' as const, text: input }];
     setConversationHistory(newHistory);
 
+    // Detect meal time from input
+    const lowerInput = input.toLowerCase();
+    let mealTime: 'breakfast' | 'lunch' | 'dinner' | undefined;
+    if (lowerInput.includes('morning') || lowerInput.includes('breakfast')) {
+      mealTime = 'breakfast';
+    } else if (lowerInput.includes('lunch') || lowerInput.includes('midday') || lowerInput.includes('noon')) {
+      mealTime = 'lunch';
+    } else if (lowerInput.includes('evening') || lowerInput.includes('dinner') || lowerInput.includes('night')) {
+      mealTime = 'dinner';
+    }
+
     if (ws && ws.readyState === WebSocket.OPEN && !isVoice) {
       const prompt = {
         type: 'chat',
         message: input,
         shortAnswers: shortAnswers,
+        mealTime: mealTime,
         context: conversationHistory.map(entry => ({ role: entry.role, text: entry.text })),
         instructions: `You are an AI assistant for a kitchen inventory system. Respond based on the following rules:
-          - If the user asks to 'check stock' or 'list stock', return a comma-separated list of available stock items with their quantities and units (e.g., "Apples: 5 kg, Bananas: 10 pcs").
+          - If the user asks to 'check stock' or 'list stock', return a comma-separated list of available stock items with their units (e.g., "Apples: kg, Bananas: pcs").
           - If the user says 'check nutrients' followed by an item name (e.g., 'check nutrients banana'), provide the nutrient details for that item (calories, protein, carbs, fats) from the nutrient map if available, or say 'No nutrient data available'.
-          - If the user says 'suggest meals', provide meal suggestions for breakfast, lunch, and dinner using available stock items, ensuring variety and balanced nutrition.
+          - If the user asks for a dish or meal suggestion (e.g., 'suggest meals', 'what can I make for breakfast'), provide meal suggestions for the specified meal time (breakfast, lunch, or dinner) if provided, using available stock items, ensuring variety and balanced nutrition. Include dish name, ingredients, and nutrients.
           - For general queries or unrecognized commands, respond with: 'I can check stock, check nutrients for an item, or suggest meals. Try "check stock", "check nutrients [item]", or "suggest meals".'
           - Use short responses if shortAnswers is true, otherwise provide detailed explanations.
           - Maintain context from the conversation history where relevant.`
@@ -186,11 +198,12 @@ export default function AIChatAgent() {
         const prompt = {
           question: input,
           shortAnswers: shortAnswers,
+          mealTime: mealTime,
           context: conversationHistory.map(entry => ({ role: entry.role, text: entry.text })),
           instructions: `You are an AI assistant for a kitchen inventory system. Respond based on the following rules:
-            - If the user asks to 'check stock' or 'list stock', return a comma-separated list of available stock items with their quantities and units (e.g., "Apples: 5 kg, Bananas: 10 pcs").
+            - If the user asks to 'check stock' or 'list stock', return a comma-separated list of available stock items with their units (e.g., "Apples: kg, Bananas: pcs").
             - If the user says 'check nutrients' followed by an item name (e.g., 'check nutrients banana'), provide the nutrient details for that item (calories, protein, carbs, fats) from the nutrient map if available, or say 'No nutrient data available'.
-            - If the user says 'suggest meals', provide meal suggestions for breakfast, lunch, and dinner using available stock items, ensuring variety and balanced nutrition.
+            - If the user asks for a dish or meal suggestion (e.g., 'suggest meals', 'what can I make for breakfast'), provide meal suggestions for the specified meal time (breakfast, lunch, or dinner) if provided, using available stock items, ensuring variety and balanced nutrition. Include dish name, ingredients, and nutrients.
             - For general queries or unrecognized commands, respond with: 'I can check stock, check nutrients for an item, or suggest meals. Try "check stock", "check nutrients [item]", or "suggest meals".'
             - Use short responses if shortAnswers is true, otherwise provide detailed explanations.
             - Maintain context from the conversation history where relevant.`
@@ -210,7 +223,7 @@ export default function AIChatAgent() {
           speakText(responseText);
         }
 
-        // Check if the input is a stock check request
+        // Check if the input is a stock check or nutrient check request
         const trimmedInput = input.trim().toLowerCase();
         if (trimmedInput.includes('check stock') || trimmedInput.includes('check nutrients')) {
           const itemName = trimmedInput.replace(/check stock|check nutrients/gi, '').trim();

@@ -140,6 +140,7 @@ class StockItemController {
 
   static async suggestMeals(req, res) {
     try {
+      const { mealTime } = req.body; // Expect mealTime to be 'breakfast', 'lunch', or 'dinner'
       const stockItems = await StockItem.find();
       const ingredients = stockItems.map(item => ({
         name: item.name,
@@ -147,7 +148,7 @@ class StockItemController {
         nutrients: item.nutrients,
       }));
 
-      const mealSuggestions = await generateMealSuggestions(ingredients);
+      const mealSuggestions = await generateMealSuggestions(ingredients, mealTime);
       res.status(200).json(mealSuggestions);
     } catch (error) {
       res.status(500).json({ message: 'Error generating meal suggestions', error: error.message });
@@ -171,35 +172,74 @@ class StockItemController {
   }
 }
 
-async function generateMealSuggestions(ingredients) {
+async function generateMealSuggestions(ingredients, mealTime) {
   const meals = { breakfast: [], lunch: [], dinner: [] };
 
-  // Basic meal suggestion logic based on ingredient availability
-  if (ingredients.some(i => i.name.toLowerCase().includes('egg'))) {
-    meals.breakfast.push({
-      name: 'Scrambled Eggs with Spinach',
+  // Define meal recipes with required ingredients and nutrients
+  const recipes = [
+    {
+      mealTime: 'breakfast',
+      name: 'Scr RENAMEd Eggs with Spinach',
       ingredients: ['Eggs', 'Spinach'],
       nutrients: { calories: 200, protein: 15, carbs: 5, fats: 12 },
-    });
-  }
-  if (ingredients.some(i => i.name.toLowerCase().includes('chicken'))) {
-    meals.dinner.push({
-      name: 'Grilled Chicken Salad',
-      ingredients: ['Chicken', 'Lettuce', 'Tomato'],
-      nutrients: { calories: 350, protein: 30, carbs: 15, fats: 10 },
-    });
-  }
-  if (ingredients.some(i => i.name.toLowerCase().includes('rice'))) {
-    meals.lunch.push({
+    },
+    {
+      mealTime: 'breakfast',
+      name: 'Banana Oatmeal',
+      ingredients: ['Banana', 'Oats', 'Milk'],
+      nutrients: { calories: 250, protein: 8, carbs: 40, fats: 5 },
+    },
+    {
+      mealTime: 'lunch',
       name: 'Vegetable Fried Rice',
       ingredients: ['Rice', 'Carrots', 'Peas'],
       nutrients: { calories: 250, protein: 8, carbs: 40, fats: 5 },
+    },
+    {
+      mealTime: 'lunch',
+      name: 'Chicken Wrap',
+      ingredients: ['Chicken', 'Lettuce', 'Tomato', 'Tortilla'],
+      nutrients: { calories: 300, protein: 25, carbs: 30, fats: 10 },
+    },
+    {
+      mealTime: 'dinner',
+      name: 'Grilled Chicken Salad',
+      ingredients: ['Chicken', 'Lettuce', 'Tomato'],
+      nutrients: { calories: 350, protein: 30, carbs: 15, fats: 10 },
+    },
+    {
+      mealTime: 'dinner',
+      name: 'Salmon with Roasted Potatoes',
+      ingredients: ['Salmon Fillet', 'Potatoes', 'Broccoli'],
+      nutrients: { calories: 400, protein: 30, carbs: 25, fats: 15 },
+    },
+  ];
+
+  // Filter recipes based on available ingredients and meal time
+  const availableRecipes = recipes.filter(recipe => {
+    const hasAllIngredients = recipe.ingredients.every(recipeIngredient =>
+      ingredients.some(ingredient => ingredient.name.toLowerCase().includes(recipeIngredient.toLowerCase()))
+    );
+    return hasAllIngredients && (!mealTime || recipe.mealTime === mealTime);
+  });
+
+  // Group recipes by meal time
+  availableRecipes.forEach(recipe => {
+    meals[recipe.mealTime].push({
+      name: recipe.name,
+      ingredients: recipe.ingredients,
+      nutrients: recipe.nutrients,
     });
+  });
+
+  // If mealTime is specified, return only that meal's suggestions
+  if (mealTime) {
+    return { [mealTime]: meals[mealTime] };
   }
 
   // Optionally integrate with Gemini API for more sophisticated suggestions
   if (geminiApiKey && ingredients.length > 0) {
-    const prompt = `Suggest nutritious meals for breakfast, lunch, and dinner using these ingredients: ${ingredients.map(i => `${i.name} (${i.quantity} ${i.unit})`).join(', ')}. Ensure variety and balanced nutrition.`;
+    const prompt = `Suggest nutritious meals for ${mealTime ? mealTime : 'breakfast, lunch, and dinner'} using these ingredients: ${ingredients.map(i => `${i.name} (${i.unit})`).join(', ')}. Ensure variety and balanced nutrition. Return a JSON object with meal suggestions grouped by meal time.`;
     try {
       const response = await axios.post(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,

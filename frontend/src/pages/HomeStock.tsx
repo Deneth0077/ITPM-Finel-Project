@@ -12,6 +12,7 @@ interface StockItem {
   category: string;
   status: "InStock" | "Pending" | "OutOfStock";
   image?: string;
+  price?: string;
   nutrients?: {
     calories?: number;
     protein?: number;
@@ -35,6 +36,7 @@ export default function HomeStock() {
     category: '',
     status: '' as '' | 'InStock' | 'Pending' | 'OutOfStock',
     image: null as File | null,
+    price: '',
     nutrients: { calories: '', protein: '', carbs: '', fats: '' },
   });
   const [editId, setEditId] = useState<string | null>(null);
@@ -96,6 +98,7 @@ export default function HomeStock() {
     if (formData.image) {
       data.append('image', formData.image);
     }
+    data.append('price', formData.price);
     data.append('nutrients', JSON.stringify({
       calories: parseFloat(formData.nutrients.calories) || 0,
       protein: parseFloat(formData.nutrients.protein) || 0,
@@ -132,6 +135,7 @@ export default function HomeStock() {
         category: '',
         status: '',
         image: null,
+        price: '',
         nutrients: { calories: '', protein: '', carbs: '', fats: '' },
       });
       addToast("success", "Success", "Item added successfully!");
@@ -152,6 +156,7 @@ export default function HomeStock() {
       category: stockItem.category,
       status: stockItem.status,
       image: null,
+      price: stockItem.price || '',
       nutrients: {
         calories: nutrients.calories?.toString() || '0',
         protein: nutrients.protein?.toString() || '0',
@@ -239,6 +244,15 @@ export default function HomeStock() {
               className="border p-2 rounded"
               required
             />
+            <input
+              type="text"
+              name="price"
+              value={formData.price}
+              onChange={handleInputChange}
+              placeholder="Price (e.g., 2.99)"
+              className="border p-2 rounded"
+              required
+            />
             <select
               name="status"
               value={formData.status}
@@ -300,78 +314,82 @@ export default function HomeStock() {
 
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90 mb-4">Current Ingredients</h3>
-          <Table>
-            <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
-              <TableRow>
-                <TableCell isHeader className="text-left">Image</TableCell>
-                <TableCell isHeader className="text-left">Name</TableCell>
-                <TableCell isHeader className="text-left">Unit</TableCell>
-                <TableCell isHeader className="text-left">Category</TableCell>
-                <TableCell isHeader className="text-left">Status</TableCell>
-                <TableCell isHeader className="text-left">Nutrients</TableCell>
-                <TableCell isHeader className="text-left">Actions</TableCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {loading ? (
-                <TableRow><td colSpan={8} className="text-center py-3">Loading...</td></TableRow>
-              ) : error ? (
-                <TableRow><td colSpan={8} className="text-center py-3 text-red-500">{error}</td></TableRow>
-              ) : stockItems.length === 0 ? (
-                <TableRow><td colSpan={8} className="text-center py-3">No ingredients found</td></TableRow>
-              ) : (
-                stockItems.map((stockItem) => (
-                  <TableRow key={stockItem.id}>
-                    <TableCell className="text-left">
-                      {stockItem.image ? (
-                        <img 
-                          src={stockItem.image} 
-                          alt={stockItem.name} 
-                          className="w-12 h-12 object-cover rounded"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                          <span className="text-gray-400">No image</span>
+          <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+            <Table>
+              <TableHeader className="border-gray-100 dark:border-gray-800 border-y">
+                <TableRow>
+                  <TableCell isHeader className="text-left">Image</TableCell>
+                  <TableCell isHeader className="text-left">Name</TableCell>
+                  <TableCell isHeader className="text-left">Unit</TableCell>
+                  <TableCell isHeader className="text-left">Category</TableCell>
+                  <TableCell isHeader className="text-left">Price</TableCell>
+                  <TableCell isHeader className="text-left">Status</TableCell>
+                  <TableCell isHeader className="text-left">Nutrients</TableCell>
+                  <TableCell isHeader className="text-left">Actions</TableCell>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {loading ? (
+                  <TableRow><td colSpan={9} className="text-center py-3">Loading...</td></TableRow>
+                ) : error ? (
+                  <TableRow><td colSpan={9} className="text-center py-3 text-red-500">{error}</td></TableRow>
+                ) : stockItems.length === 0 ? (
+                  <TableRow><td colSpan={9} className="text-center py-3">No ingredients found</td></TableRow>
+                ) : (
+                  stockItems.map((stockItem) => (
+                    <TableRow key={stockItem.id}>
+                      <TableCell className="text-left">
+                        {stockItem.image ? (
+                          <img 
+                            src={stockItem.image} 
+                            alt={stockItem.name} 
+                            className="w-12 h-12 object-cover rounded"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                            <span className="text-gray-400">No image</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-left">{stockItem.name}</TableCell>
+                      <TableCell className="text-left">{stockItem.unit}</TableCell>
+                      <TableCell className="text-left">{stockItem.category}</TableCell>
+                      <TableCell className="text-left">{stockItem.price || '-'}</TableCell>
+                      <TableCell className="text-left">
+                        <Badge size="sm" color={stockItem.status === "InStock" ? "success" : stockItem.status === "Pending" ? "warning" : "error"}>
+                          {stockItem.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-left">
+                        {(() => {
+                          const nutrients = stockItem.nutrients || { calories: 0, protein: 0, carbs: 0, fats: 0 };
+                          return `Cal: ${nutrients.calories || 0}, P: ${nutrients.protein || 0}g, C: ${nutrients.carbs || 0}g, F: ${nutrients.fats || 0}g`;
+                        })()}
+                      </TableCell>
+                      <TableCell className="text-left">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(stockItem)}
+                            className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
+                            disabled={loading}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(stockItem.id)}
+                            className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                            disabled={loading}
+                          >
+                            Delete
+                          </button>
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-left">{stockItem.name}</TableCell>
-                    <TableCell className="text-left">{stockItem.unit}</TableCell>
-                    <TableCell className="text-left">{stockItem.category}</TableCell>
-                    <TableCell className="text-left">
-                      <Badge size="sm" color={stockItem.status === "InStock" ? "success" : stockItem.status === "Pending" ? "warning" : "error"}>
-                        {stockItem.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-left">
-                      {(() => {
-                        const nutrients = stockItem.nutrients || { calories: 0, protein: 0, carbs: 0, fats: 0 };
-                        return `Cal: ${nutrients.calories || 0}, P: ${nutrients.protein || 0}g, C: ${nutrients.carbs || 0}g, F: ${nutrients.fats || 0}g`;
-                      })()}
-                    </TableCell>
-                    <TableCell className="text-left">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(stockItem)}
-                          className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
-                          disabled={loading}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(stockItem.id)}
-                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                          disabled={loading}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
     </div>
